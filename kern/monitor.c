@@ -13,7 +13,6 @@
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
-
 struct Command {
 	const char *name;
 	const char *desc;
@@ -24,6 +23,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace","Fuck JOS",mon_backtrace},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -58,7 +58,17 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	// Your code here.
+	uint32_t *ebpv;
+	ebpv = (uint32_t*)read_ebp();
+	struct Eipdebuginfo INFO;
+	cprintf("Stack backtrace:\n");
+	while (ebpv != 0){
+		cprintf("  ebp %08x  eip %08x  args %08x %08x %08x %08x %08x\n",ebpv,ebpv[1],ebpv[2],ebpv[3],ebpv[4],ebpv[5],ebpv[6]);
+		debuginfo_eip(ebpv[1], &INFO);
+		cprintf("     %s:%d: %.*s+%d\n",INFO.eip_file,INFO.eip_line,INFO.eip_fn_namelen,INFO.eip_fn_name,ebpv[1]-INFO.eip_fn_addr);
+		ebpv = (uint32_t *)(*ebpv);
+	}
+
 	return 0;
 }
 
