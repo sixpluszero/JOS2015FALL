@@ -1,7 +1,7 @@
 #include <inc/mmu.h>
 #include <inc/x86.h>
 #include <inc/assert.h>
-
+#include <inc/string.h>
 #include <kern/pmap.h>
 #include <kern/trap.h>
 #include <kern/console.h>
@@ -25,9 +25,13 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
+extern char TP0TEST[];
 
-static const char *trapname(int trapno)
-{
+
+
+char TTT[128] = {0x6a, 0x00, 0x6a, 0x00, 0xe9, 0x4e};
+int tmpcode;
+static const char *trapname(int trapno){
 	static const char * const excnames[] = {
 		"Divide error",
 		"Debug",
@@ -59,21 +63,93 @@ static const char *trapname(int trapno)
 }
 
 
-void
-trap_init(void)
-{
+void trap_init(void){
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+	/*
+	void TRAP0();
+	void TRAP1();
+	void TRAP3();
+	void TRAP4();
+	void TRAP5();
+	void TRAP6();
+	void TRAP7();
+	void TRAP8();
+	void TRAP9();
+	void TRAP10();
+	void TRAP11();
+	void TRAP12();
+	void TRAP13();
+	void TRAP14();
+	void TRAP16();
+	*/
+	void TRAP48();
+	
+	void _alltraps();
+	
+	
+	int iter = 0;
+	for (iter = 0; iter <= 16; iter ++){
+		tmpcode = -(int) (((uint32_t)TP0TEST + (iter * 16) + 9) - (uint32_t)_alltraps);
+		if ((iter == 8) || (iter >= 10 && iter <= 14)){
+			TTT[0] = (unsigned char) 0x90;
+			TTT[1] = (unsigned char) 0x90;
+		}else{
+			TTT[0] = (unsigned char) 0x6a;
+			TTT[1] = (unsigned char) 0x00;
+		}
+		TTT[3] = (unsigned char) iter;
+		TTT[5] = (unsigned char)(((uint32_t)tmpcode >>  0) & 0xFF);
+		TTT[6] = (unsigned char)(((uint32_t)tmpcode >>  8) & 0xFF);
+		TTT[7] = (unsigned char)(((uint32_t)tmpcode >> 16) & 0xFF);
+		TTT[8] = (unsigned char)(((uint32_t)tmpcode >> 24) & 0xFF);
+		memcpy((void *)TP0TEST + (iter * 16), (const void *)TTT, 9);		
+	}
+	
+	for (iter = 0; iter <= 16; iter ++){
+		if (iter == 3){
+			SETGATE(idt[iter], 0, GD_KT, (uint32_t)TP0TEST + (iter * 16), 3);
+		}else{
+			SETGATE(idt[iter], 0, GD_KT, (uint32_t)TP0TEST + (iter * 16), 0);			
+		}
+	}
+	
+	
+	/*
+	SETGATE(idt[0], 0, GD_KT, TRAP0, 0)
+	SETGATE(idt[1], 0, GD_KT, TRAP1, 0)
+	SETGATE(idt[3], 0, GD_KT, TRAP3, 3)
+	SETGATE(idt[4], 0, GD_KT, TRAP4, 0)
+	SETGATE(idt[5], 0, GD_KT, TRAP5, 0)
+	SETGATE(idt[6], 0, GD_KT, TRAP6, 0)
+	SETGATE(idt[7], 0, GD_KT, TRAP7, 0)
+	SETGATE(idt[8], 0, GD_KT, TRAP8, 0)
+	SETGATE(idt[9], 0, GD_KT, TRAP9, 0)
+	SETGATE(idt[10], 0, GD_KT, TRAP10, 0)
+	SETGATE(idt[11], 0, GD_KT, TRAP11, 0)
+	SETGATE(idt[12], 0, GD_KT, TRAP12, 0)
+	SETGATE(idt[13], 0, GD_KT, TRAP13, 0)
+	SETGATE(idt[14], 0, GD_KT, TRAP14, 0)
+	SETGATE(idt[16], 0, GD_KT, TRAP16, 0)
+	*/
+	SETGATE(idt[48], 0, GD_KT, TRAP48, 3)
+
+	//TEST
+	//SETGATE(idt[30], 0, GD_KT, TRAP30, 3)
 
 	// Per-CPU setup 
 	trap_init_percpu();
+
+
+
+	//Just for test;
+	//asm volatile("INT $30");
+
 }
 
 // Initialize and load the per-CPU TSS and IDT
-void
-trap_init_percpu(void)
-{
+void trap_init_percpu(void){
 	// Setup a TSS so that we get the right stack
 	// when we trap to the kernel.
 	ts.ts_esp0 = KSTACKTOP;
@@ -92,9 +168,7 @@ trap_init_percpu(void)
 	lidt(&idt_pd);
 }
 
-void
-print_trapframe(struct Trapframe *tf)
-{
+void print_trapframe(struct Trapframe *tf){
 	cprintf("TRAP frame at %p\n", tf);
 	print_regs(&tf->tf_regs);
 	cprintf("  es   0x----%04x\n", tf->tf_es);
@@ -125,9 +199,7 @@ print_trapframe(struct Trapframe *tf)
 	}
 }
 
-void
-print_regs(struct PushRegs *regs)
-{
+void print_regs(struct PushRegs *regs){
 	cprintf("  edi  0x%08x\n", regs->reg_edi);
 	cprintf("  esi  0x%08x\n", regs->reg_esi);
 	cprintf("  ebp  0x%08x\n", regs->reg_ebp);
@@ -138,12 +210,44 @@ print_regs(struct PushRegs *regs)
 	cprintf("  eax  0x%08x\n", regs->reg_eax);
 }
 
-static void
-trap_dispatch(struct Trapframe *tf)
-{
+static void trap_dispatch(struct Trapframe *tf){
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	
 
+
+
+	if (tf->tf_trapno == 3){
+		cprintf("[DEBUG] Breakpoint!\n");
+		monitor(tf);
+		return;
+	}
+
+
+	if (tf->tf_trapno == 14){
+		cprintf("[DEBUG] Page Fault!\n");
+		page_fault_handler(tf);
+		return;
+	}
+
+	if (tf->tf_trapno == 48){
+		cprintf("[DEBUG] Syscall!\n");
+		tf->tf_regs.reg_eax = 
+			syscall(tf->tf_regs.reg_eax, 
+			tf->tf_regs.reg_edx,
+			tf->tf_regs.reg_ecx,
+			tf->tf_regs.reg_ebx,
+			tf->tf_regs.reg_edi,
+			tf->tf_regs.reg_esi);
+		cprintf("[DEBUG] Syscall return\n");
+		//%edx, %ecx, %ebx, %edi, and %esi
+		return;
+	}
+	/*
+	if (tf->tf_trapno == 0){
+		cprintf("[DEBUG]#####################################\n ");
+	}
+	*/
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -154,9 +258,7 @@ trap_dispatch(struct Trapframe *tf)
 	}
 }
 
-void
-trap(struct Trapframe *tf)
-{
+void trap(struct Trapframe *tf){
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
 	asm volatile("cld" ::: "cc");
@@ -167,7 +269,6 @@ trap(struct Trapframe *tf)
 	assert(!(read_eflags() & FL_IF));
 
 	cprintf("Incoming TRAP frame at %p\n", tf);
-
 	if ((tf->tf_cs & 3) == 3) {
 		// Trapped from user mode.
 		assert(curenv);
@@ -193,9 +294,7 @@ trap(struct Trapframe *tf)
 }
 
 
-void
-page_fault_handler(struct Trapframe *tf)
-{
+void page_fault_handler(struct Trapframe *tf){
 	uint32_t fault_va;
 
 	// Read processor's CR2 register to find the faulting address
@@ -204,7 +303,11 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+	
+	if ((tf->tf_cs & 3) == 0){
+		panic("Kernel-mode page fault!\n");
+	}
+	
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 
