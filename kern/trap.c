@@ -109,9 +109,9 @@ void trap_init(void){
 	
 	for (iter = 0; iter <= 16; iter ++){
 		if (iter == 3){
-			SETGATE(idt[iter], 0, GD_KT, (uint32_t)TP0TEST + (iter * 16), 3);
+			SETGATE(idt[iter], 0, GD_TEST, (uint32_t)TP0TEST + (iter * 16), 3);
 		}else{
-			SETGATE(idt[iter], 0, GD_KT, (uint32_t)TP0TEST + (iter * 16), 0);			
+			SETGATE(idt[iter], 0, GD_TEST, (uint32_t)TP0TEST + (iter * 16), 0);			
 		}
 	}
 	

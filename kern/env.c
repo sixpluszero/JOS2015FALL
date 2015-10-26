@@ -43,7 +43,7 @@ struct Segdesc gdt[] =
 	[GD_KT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0),
 
 	// 0x10 - kernel data segment
-	[GD_KD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 0),
+	[GD_KD >> 3] = SEG(STA_W , 0x0, 0xffffffff, 0),
 
 	// 0x18 - user code segment
 	[GD_UT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 3),
@@ -52,7 +52,9 @@ struct Segdesc gdt[] =
 	[GD_UD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 3),
 
 	// 0x28 - tss, initialized in trap_init_percpu()
-	[GD_TSS0 >> 3] = SEG_NULL
+	[GD_TSS0 >> 3] = SEG_NULL,
+
+	[GD_TEST >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0)
 };
 
 struct Pseudodesc gdt_pd = {
