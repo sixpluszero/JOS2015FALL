@@ -170,12 +170,11 @@ void mem_init(void){
 	page_init();
 
 	check_page_free_list(1);
-
 	check_page_alloc();
 
 	check_page();
 	//panic("mem_init: This function is not finished\n");
-	cprintf("%x %x\n",&pages[1], pages);
+	//cprintf("%x %x\n",&pages[1], pages);
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
 
@@ -198,13 +197,13 @@ void mem_init(void){
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
-	cprintf("[############Debug##########]%d %d\n",ROUNDUP(sizeof(struct Env)*NENV, PTSIZE), PTSIZE);
+	//cprintf("[############Debug##########]%d %d\n",ROUNDUP(sizeof(struct Env)*NENV, PTSIZE), PTSIZE);
 	uint32_t TEST = ROUNDUP(sizeof(struct Env) * NENV, PTSIZE);
 	boot_map_region(kern_pgdir,
 		UENVS,
 		//ROUNDUP(sizeof(struct Env) * NENV, PTSIZE),
 		//PTSIZE,
-		TEST,
+		PTSIZE,
 		PADDR(envs),
 		PTE_U|PTE_P);
 	//////////////////////////////////////////////////////////////////////
@@ -231,21 +230,18 @@ void mem_init(void){
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-<<<<<<< HEAD
+	boot_map_region(kern_pgdir,
+		KERNBASE,
+		ROUNDUP(0xFFFFFFFF-KERNBASE+1, PGSIZE),
+		0,
+		PTE_W|PTE_P);
 
 	// Initialize the SMP-related parts of the memory map
 	mem_init_mp();
 
-=======
-	boot_map_region(kern_pgdir,
-		KERNBASE,
-		ROUNDUP((0xFFFFFFFF - KERNBASE + 1), PGSIZE),
-		0,
-		PTE_W|PTE_P);
->>>>>>> lab3
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
-
+	//panic("just test");
 	// Switch from the minimal entry page directory to the full kern_pgdir
 	// page table we just created.	Our instruction pointer should be
 	// somewhere between KERNBASE and KERNBASE+4MB right now, which is
@@ -263,9 +259,10 @@ void mem_init(void){
 	cr0 |= CR0_PE|CR0_PG|CR0_AM|CR0_WP|CR0_NE|CR0_MP;
 	cr0 &= ~(CR0_TS|CR0_EM);
 	lcr0(cr0);
-
 	// Some more checks, only possible after kern_pgdir is installed.
 	check_page_installed_pgdir();
+	//panic("HELLO");
+
 }
 
 // Modify mappings in kern_pgdir to support SMP
@@ -290,7 +287,17 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
+	int i;
+	for (i = 0; i < NCPU; i++){
+		cprintf("percpu_kstacks[%d]: %x\n", i, percpu_kstacks[i]);
+		uint32_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+		boot_map_region(kern_pgdir,
+			kstacktop_i - KSTKSIZE,
+			KSTKSIZE,
+			PADDR(percpu_kstacks[i]),
+			PTE_W|PTE_P);
 
+	}
 }
 
 // --------------------------------------------------------------
@@ -305,7 +312,6 @@ mem_init_mp(void)
 // allocator functions below to allocate and deallocate physical
 // memory via the page_free_list.
 //
-<<<<<<< HEAD
 void
 page_init(void)
 {
@@ -313,9 +319,6 @@ page_init(void)
 	// Change your code to mark the physical page at MPENTRY_PADDR
 	// as in use
 
-=======
-void page_init(void){
->>>>>>> lab3
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
 	//  1) Mark physical page 0 as in use.
@@ -337,15 +340,17 @@ void page_init(void){
 	size_t STP_IO = PGNUM(IOPHYSMEM);
 	size_t STP_EXT = PGNUM(EXTPHYSMEM) - 1;
 	size_t STP_END = PGNUM((uint32_t)boot_alloc(0) - KERNBASE) - 1;
-
+	size_t STP_MP = PGNUM(MPENTRY_PADDR);
+	/*
 	cprintf("%d %d %d %x %x\n", 
 		STP_IO,
 		STP_EXT,
 		STP_END,
 		(uint32_t)page2pa(&pages[0]),
 		(uint32_t)page2pa(&pages[npages-1]));
+		*/
 	for (i = 0; i < npages; i++){
-		if (i == 0 || (STP_IO <= i && i <= STP_END)){
+		if (i == 0 || (STP_IO <= i && i <= STP_END) || i == STP_MP){
 			pages[i].pp_ref = 1;
 		} else{
 			pages[i].pp_ref = 0;
@@ -625,7 +630,16 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	size = ROUNDUP(pa+size, PGSIZE);
+	pa = ROUNDDOWN(pa, PGSIZE);
+	size = size - pa;
+
+	if (base + size > MMIOLIM) panic("overflow MMIOLIM!");
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W );
+	uint32_t tmp = base;
+	base += size;
+	return (void *)tmp;
+	//panic("mmio_map_region not implemented");
 }
 
 static uintptr_t user_mem_check_addr;
@@ -842,25 +856,20 @@ static void check_kern_pgdir(void){
 	n = ROUNDUP(npages*sizeof(struct PageInfo), PGSIZE);
 	for (i = 0; i < n; i += PGSIZE)
 		assert(check_va2pa(pgdir, UPAGES + i) == PADDR(pages) + i);
-//<<<<<<< HEAD
 
 	// check envs array (new test for lab 3)
 	n = ROUNDUP(NENV*sizeof(struct Env), PGSIZE);
 	for (i = 0; i < n; i += PGSIZE)
 		assert(check_va2pa(pgdir, UENVS + i) == PADDR(envs) + i);
-//=======
-	//cprintf("s1 done\n");
-//>>>>>>> lab2
 
 	// check phys mem
 	for (i = 0; i < npages * PGSIZE; i += PTSIZE){
-		//cprintf("%d %d\n",check_va2pa(pgdir, KERNBASE + i));
+		//cprintf("[DEBUG] %d %d\n",check_va2pa(pgdir, KERNBASE + i), i);
 		//cprintf("%x\n", pgdir);
+		
 		assert(check_va2pa(pgdir, KERNBASE + i) == i);
+
 	}
-	//cprintf("s2 done\n");
-	// check kernel stack
-<<<<<<< HEAD
 	// (updated in lab 4 to check per-CPU kernel stacks)
 	for (n = 0; n < NCPU; n++) {
 		uint32_t base = KSTACKTOP - (KSTKSIZE + KSTKGAP) * (n + 1);
@@ -871,12 +880,6 @@ static void check_kern_pgdir(void){
 			assert(check_va2pa(pgdir, base + i) == ~0);
 	}
 
-=======
-	for (i = 0; i < KSTKSIZE; i += PGSIZE)
-		assert(check_va2pa(pgdir, KSTACKTOP - KSTKSIZE + i) == PADDR(bootstack) + i);
-	assert(check_va2pa(pgdir, KSTACKTOP - PTSIZE) == ~0);
-	//cprintf("s3 done\n");
->>>>>>> lab3
 	// check PDE permissions
 	for (i = 0; i < NPDENTRIES; i++) {
 		switch (i) {

@@ -53,16 +53,9 @@ struct Segdesc gdt[NCPU + 5] =
 	// 0x20 - user data segment
 	[GD_UD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 3),
 
-<<<<<<< HEAD
 	// Per-CPU TSS descriptors (starting from GD_TSS0) are initialized
 	// in trap_init_percpu()
 	[GD_TSS0 >> 3] = SEG_NULL
-=======
-	// 0x28 - tss, initialized in trap_init_percpu()
-	[GD_TSS0 >> 3] = SEG_NULL,
-
-	[GD_TEST >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0)
->>>>>>> lab3
 };
 
 struct Pseudodesc gdt_pd = {
@@ -128,10 +121,8 @@ void env_init(void){
 		envs[i].env_link = env_free_list;
 		env_free_list = &envs[i];
 	}
-	cprintf("Now freelist done\n");
 	// Per-CPU part of the initialization
 	env_init_percpu();
-	cprintf("Now percpu done\n");
 
 }
 
@@ -167,7 +158,6 @@ void env_init_percpu(void){
 static int env_setup_vm(struct Env *e){
 	int i;
 	struct PageInfo *p = NULL;
-	cprintf("env_setup_vm start\n");
 	// Allocate a page for the page directory
 	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
@@ -196,7 +186,6 @@ static int env_setup_vm(struct Env *e){
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
 	e -> env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
-	cprintf("Page VM setup done..\n");
 	return 0;
 }
 
@@ -280,7 +269,6 @@ int env_alloc(struct Env **newenv_store, envid_t parent_id){
 static void region_alloc(struct Env *e, void *va, size_t len){
 	// LAB 3: Your code here.
 	// (But only if you need it for load_icode.)
-	cprintf("entering region_alloc\n");
 	void *va_begin = ROUNDDOWN(va, PGSIZE);
 	void *va_end = ROUNDUP(va+len, PGSIZE);
 	void *va_current = va_begin;
@@ -289,7 +277,6 @@ static void region_alloc(struct Env *e, void *va, size_t len){
 		if (!pg) panic("allocation failure");
 		page_insert(e->env_pgdir, pg, va_current, PTE_U | PTE_W | PTE_P);
 	}
-	cprintf("region_alloc done\n");
 	// Hint: It is easier to use region_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
@@ -451,7 +438,6 @@ void env_free(struct Env *e){
 // If e was the current env, then runs a new environment (and does not return
 // to the caller).
 //
-<<<<<<< HEAD
 void
 env_destroy(struct Env *e)
 {
@@ -462,10 +448,6 @@ env_destroy(struct Env *e)
 		e->env_status = ENV_DYING;
 		return;
 	}
-
-=======
-void env_destroy(struct Env *e){
->>>>>>> lab3
 	env_free(e);
 
 	if (curenv == e) {
@@ -481,16 +463,12 @@ void env_destroy(struct Env *e){
 //
 // This function does not return.
 //
-<<<<<<< HEAD
 void
 env_pop_tf(struct Trapframe *tf)
 {
 	// Record the CPU we are running on for user-space debugging
 	curenv->env_cpunum = cpunum();
-
-=======
-void env_pop_tf(struct Trapframe *tf){
->>>>>>> lab3
+	//cprintf("[cpunum]%d\n",cpunum());
 	__asm __volatile("movl %0,%%esp\n"
 		"\tpopal\n"
 		"\tpopl %%es\n"
@@ -526,15 +504,17 @@ void env_run(struct Env *e){
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-	if (curenv != NULL){
-		if (curenv->env_status == ENV_RUNNING)
-			curenv->env_status = ENV_RUNNABLE;
+	if (curenv != e){
+		if (curenv)
+			if (curenv->env_status == ENV_RUNNING)
+				curenv->env_status = ENV_RUNNABLE;
+		curenv = e;
+		curenv->env_status = ENV_RUNNING;
+		curenv->env_runs++;
+		lcr3(PADDR(e->env_pgdir));
 	}
-	curenv = e;
-	curenv->env_status = ENV_RUNNING;
-	curenv->env_runs++;
-	lcr3(PADDR(curenv->env_pgdir));
-	env_pop_tf(&curenv->env_tf);
-	//panic("env_run not yet implemented");
+	unlock_kernel();
+
+	env_pop_tf(&e->env_tf);
 }
 

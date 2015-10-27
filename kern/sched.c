@@ -29,6 +29,32 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
+	int curID;
+	if (curenv) 
+		curID = ENVX(curenv->env_id);
+	else
+		curID = -1;
+	//cprintf("Current ENV ID %x\n",curID);
+
+	int i;
+	for (i = curID+1; i < NENV; i++) {
+		if (envs[i].env_status == ENV_RUNNABLE)	{
+				cprintf("To RUN %d %x\n", i, envs[i].env_id);
+				env_run(envs+i);
+			}
+	}
+	if (i == NENV){
+		for (i = 0; i < curID; i++) {
+			if (envs[i].env_status == ENV_RUNNABLE)	{
+				cprintf("To RUN %d %x\n", i, envs[i].env_id);			
+				env_run(envs+i);
+			}
+		}
+	}	
+	if (curID != -1 && i == curID) {
+		//cprintf("No other runnable environments in the system!\n");
+		if (curenv->env_status == ENV_RUNNING) env_run(curenv);
+	}
 
 	// sched_halt never returns
 	sched_halt();
