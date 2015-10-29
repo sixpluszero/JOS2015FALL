@@ -6,7 +6,7 @@
 #include <inc/memlayout.h>
 #include <inc/assert.h>
 #include <inc/x86.h>
-
+#include <kern/env.h>
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
@@ -24,12 +24,16 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-	{ "backtrace","Fuck JOS",mon_backtrace},
+	{ "dgdt", "TEST ME", mon_gdt },
+	{ "backtrace","Fuck JOS", mon_backtrace},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
 /***** Implementations of basic kernel monitor commands *****/
-
+int mon_gdt(int argc, char **argv, struct Trapframe *tf){
+	//cprintf("%x\n", gdt[1]);
+	return 0;
+}
 int
 mon_help(int argc, char **argv, struct Trapframe *tf)
 {
