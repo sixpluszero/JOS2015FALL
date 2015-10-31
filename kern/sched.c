@@ -39,14 +39,14 @@ sched_yield(void)
 	int i;
 	for (i = curID+1; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE)	{
-				cprintf("To RUN %d %x\n", i, envs[i].env_id);
+				//cprintf("To RUN %d %x\n", i, envs[i].env_id);
 				env_run(envs+i);
 			}
 	}
 	if (i == NENV){
 		for (i = 0; i < curID; i++) {
 			if (envs[i].env_status == ENV_RUNNABLE)	{
-				cprintf("To RUN %d %x\n", i, envs[i].env_id);			
+				//cprintf("To RUN %d %x\n", i, envs[i].env_id);			
 				env_run(envs+i);
 			}
 		}

@@ -74,6 +74,22 @@ void trap_init(void){
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
+	void TRAP32();
+	void TRAP33();
+	void TRAP34();
+	void TRAP35();
+	void TRAP36();
+	void TRAP37();
+	void TRAP38();
+	void TRAP39();
+	void TRAP40();
+	void TRAP41();
+	void TRAP42();
+	void TRAP43();
+	void TRAP44();
+	void TRAP45();
+	void TRAP46();
+	void TRAP47();
 	void TRAP48();
 	
 	void _alltraps();
@@ -104,6 +120,25 @@ void trap_init(void){
 			SETGATE(idt[iter], 0, GD_KT, (uint32_t)TP0TEST + (iter * 16), 0);			
 		}
 	}
+	SETGATE(idt[32], 0, GD_KT, TRAP32, 0)
+	SETGATE(idt[33], 0, GD_KT, TRAP33, 0)
+	SETGATE(idt[34], 0, GD_KT, TRAP34, 0)
+	SETGATE(idt[35], 0, GD_KT, TRAP35, 0)
+	SETGATE(idt[36], 0, GD_KT, TRAP36, 0)
+	SETGATE(idt[37], 0, GD_KT, TRAP37, 0)
+	SETGATE(idt[38], 0, GD_KT, TRAP38, 0)
+	SETGATE(idt[39], 0, GD_KT, TRAP39, 0)
+	SETGATE(idt[40], 0, GD_KT, TRAP40, 0)
+	SETGATE(idt[41], 0, GD_KT, TRAP41, 0)
+	SETGATE(idt[42], 0, GD_KT, TRAP42, 0)
+	SETGATE(idt[43], 0, GD_KT, TRAP43, 0)
+	SETGATE(idt[44], 0, GD_KT, TRAP44, 0)
+	SETGATE(idt[45], 0, GD_KT, TRAP45, 0)
+	SETGATE(idt[46], 0, GD_KT, TRAP46, 0)
+	SETGATE(idt[47], 0, GD_KT, TRAP47, 0)
+	
+
+
 	SETGATE(idt[48], 0, GD_KT, TRAP48, 3)
 
 
@@ -245,6 +280,12 @@ static void trap_dispatch(struct Trapframe *tf){
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
 
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+		lapic_eoi();
+		sched_yield();
+		return;
+	}
+
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -360,6 +401,40 @@ void page_fault_handler(struct Trapframe *tf){
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	uint32_t UTsize = sizeof(struct UTrapframe);
+	uint32_t base_addr;
+
+	// Do as the order shows above...
+	if (curenv->env_pgfault_upcall){
+		cprintf("Have pgfault_upcall\n");
+		//Check wheter recursive...
+		if (((UXSTACKTOP-PGSIZE) <= tf->tf_esp) && (tf->tf_esp < UXSTACKTOP)){
+			// We are already in exception stack
+			base_addr = tf->tf_esp - 4 - UTsize;
+		} else {
+			// We are in normal stack 
+			base_addr = UXSTACKTOP - UTsize;
+		}
+
+		// Check page alloc and permission...
+		user_mem_assert(curenv, (void *)base_addr, UTsize, PTE_W);
+
+
+		struct UTrapframe *temp = (struct UTrapframe *)base_addr;
+		temp->utf_fault_va = fault_va;
+		temp->utf_err = tf->tf_err;
+		temp->utf_regs = tf->tf_regs;
+		temp->utf_eip = tf->tf_eip;
+		temp->utf_eflags = tf->tf_eflags;
+		temp->utf_esp = tf->tf_esp;
+
+		curenv->env_tf.tf_eip = (uint32_t)curenv->env_pgfault_upcall;
+		curenv->env_tf.tf_esp = base_addr;
+
+		env_run(curenv);
+
+
+	}
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
