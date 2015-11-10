@@ -390,6 +390,25 @@ sys_acquire_priority(int pri)
 
 }
 
+// Allocate a new environment.
+// Returns envid of new environment, or < 0 on error.  Errors are:
+//	-E_NO_FREE_ENV if no free environment is available.
+//	-E_NO_MEM on memory exhaustion.
+static envid_t
+sys_prifork(void)
+{
+	struct Env * thenewenv;
+	int retCode = env_alloc(&thenewenv, curenv->env_id);
+	//Error appears...
+	if (retCode < 0) return(retCode);
+	thenewenv->env_pri = curenv->env_pri - 1;
+	cprintf("Parent: %d Son: %d\n", curenv->env_pri, thenewenv->env_pri);
+	thenewenv->env_tf = curenv -> env_tf;
+	thenewenv->env_status = ENV_NOT_RUNNABLE;
+	thenewenv->env_tf.tf_regs.reg_eax = 0;
+	return thenewenv->env_id;
+}
+
 
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
@@ -441,6 +460,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 			break;
 		case SYS_acquire_priority:
 			sys_acquire_priority(a1);
+			break;
+		case SYS_prifork:
+			return sys_prifork();
 			break;
 
 		default:

@@ -68,13 +68,9 @@ pri_yield(void)
 	int max_pri = -1;
 	int i;
 	for (i = 0; i < NENV; i++){
-		if (envs[i].env_status == ENV_RUNNABLE){
-			//cprintf("[DEBUG] %x %d %d\n", envs[i].env_id, envs[i].env_status, envs[i].env_pri);
-			if (envs[i].env_pri >= max_pri){
-
+		if ((envs[i].env_status == ENV_RUNNABLE && envs[i].env_pri >= max_pri) || (envs[i].env_status == ENV_RUNNING && envs[i].env_pri > max_pri)){
 				id = i;
 				max_pri = envs[i].env_pri;
-			}
 		}
 	}
 	if (max_pri != -1){

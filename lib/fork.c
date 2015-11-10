@@ -136,6 +136,40 @@ fork(void)
 
 	panic("fork not implemented");
 }
+envid_t
+pfork(void)
+{
+	// LAB 4: Your code here.
+	uint32_t envid;
+	set_pgfault_handler(pgfault);
+	int i;
+	envid = sys_prifork();
+	if (envid < 0)
+		panic("sys_prifork: %e", envid);
+	if (envid > 0){
+		// We are the parent.
+		for (i = 0; i < USTACKTOP; i += PGSIZE){
+			if ((uvpd[PDX(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_U)){
+				duppage(envid, PGNUM(i));
+			}
+		}
+	} else{
+		// We are the child.
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+	if (sys_page_alloc(envid, (void *)(UXSTACKTOP-PGSIZE), PTE_U|PTE_W|PTE_P) < 0)
+		panic("envid alloc exception stack error");
+	extern void _pgfault_upcall();
+	sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
+
+	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0)
+		panic("panic: set enivd status failure ");
+
+	return envid;	
+
+	panic("fork not implemented");
+}
 
 // Challenge!
 int

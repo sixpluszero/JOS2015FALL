@@ -54,6 +54,8 @@ int	sys_page_unmap(envid_t env, void *pg);
 int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
 void sys_acquire_priority(int pri);
+static envid_t sys_prifork(void);
+
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t __attribute__((always_inline))
@@ -68,6 +70,19 @@ sys_exofork(void)
 	return ret;
 }
 
+// This must be inlined.  Exercise for reader: why?
+static __inline envid_t __attribute__((always_inline))
+sys_prifork(void)
+{
+	envid_t ret;
+	__asm __volatile("int %2"
+		: "=a" (ret)
+		: "a" (SYS_prifork),
+		  "i" (T_SYSCALL)
+	);
+	return ret;
+}
+
 // ipc.c
 void	ipc_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int32_t ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
@@ -77,6 +92,7 @@ envid_t	ipc_find_env(enum EnvType type);
 #define	PTE_SHARE	0x400
 envid_t	fork(void);
 envid_t	sfork(void);	// Challenge!
+envid_t pfork(void);
 
 
 

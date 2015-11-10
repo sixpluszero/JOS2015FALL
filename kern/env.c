@@ -381,7 +381,7 @@ void env_create(uint8_t *binary, enum EnvType type){
 	env_alloc(&thenewenv, 0);
 	load_icode(thenewenv, binary);
 	thenewenv->env_type = type;
-	thenewenv->env_pri = 0;
+	thenewenv->env_pri = 10;
 }
 
 //
