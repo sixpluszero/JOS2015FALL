@@ -65,7 +65,8 @@ sys_env_destroy(envid_t envid)
 static void
 sys_yield(void)
 {
-	sched_yield();
+	//sched_yield();
+	pri_yield();
 }
 
 // Allocate a new environment.
@@ -382,6 +383,14 @@ sys_ipc_recv(void *dstva)
 	return 0;
 }
 
+static void
+sys_acquire_priority(int pri)
+{
+	curenv->env_pri += pri;
+
+}
+
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -430,6 +439,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_ipc_recv:
 			return sys_ipc_recv((void *)a1);
 			break;
+		case SYS_acquire_priority:
+			sys_acquire_priority(a1);
+			break;
+
 		default:
 			return -E_INVAL;
 	}

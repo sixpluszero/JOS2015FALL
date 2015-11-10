@@ -60,6 +60,36 @@ sched_yield(void)
 	sched_halt();
 }
 
+// Choose a user environment to run and run it.
+void
+pri_yield(void)
+{
+	int id = -1;
+	int max_pri = -1;
+	int i;
+	for (i = 0; i < NENV; i++){
+		if (envs[i].env_status == ENV_RUNNABLE){
+			//cprintf("[DEBUG] %x %d %d\n", envs[i].env_id, envs[i].env_status, envs[i].env_pri);
+			if (envs[i].env_pri >= max_pri){
+
+				id = i;
+				max_pri = envs[i].env_pri;
+			}
+		}
+	}
+	if (max_pri != -1){
+		env_run(envs+id);
+	}
+	// sched_halt never returns
+	if (curenv){
+		if (curenv->env_status == ENV_RUNNING) env_run(curenv);
+	}
+	
+	sched_halt();
+	
+}
+
+
 // Halt this CPU when there is nothing to do. Wait until the
 // timer interrupt wakes it up. This function never returns.
 //

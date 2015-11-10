@@ -406,7 +406,7 @@ void page_fault_handler(struct Trapframe *tf){
 
 	// Do as the order shows above...
 	if (curenv->env_pgfault_upcall){
-		cprintf("Have pgfault_upcall\n");
+		//cprintf("Have pgfault_upcall\n");
 		//Check wheter recursive...
 		if (((UXSTACKTOP-PGSIZE) <= tf->tf_esp) && (tf->tf_esp < UXSTACKTOP)){
 			// We are already in exception stack
