@@ -117,3 +117,9 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+void
+sys_acquire_priority(int pri)
+{
+	syscall(SYS_acquire_priority, 1, 0, 0, 0, 0, 0);
+	
+}

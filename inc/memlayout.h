@@ -17,6 +17,7 @@
 #define GD_UT     0x18     // user text
 #define GD_UD     0x20     // user data
 #define GD_TSS0   0x28     // Task segment selector for CPU 0
+#define GD_TEST   0x30     // Just a test
 
 /*
  * Virtual memory map:                                Permissions

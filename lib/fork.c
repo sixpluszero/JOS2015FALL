@@ -23,9 +23,12 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
-
+	//cprintf("%x\n", (uint32_t)addr);
 	// LAB 4: Your code here.
-
+	if (!((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_COW) && (err & FEC_WR))){
+		panic("panic: It is not a cow");
+	}
+	//cprintf("TTTTTTT%x %x\n", (uint32_t)addr, utf->utf_eip);
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -34,7 +37,17 @@ pgfault(struct UTrapframe *utf)
 
 	// LAB 4: Your code here.
 
-	panic("pgfault not implemented");
+	if (sys_page_alloc(0, PFTEMP, PTE_P|PTE_U|PTE_W) < 0) 
+		panic("panic: allocation failure");
+	memcpy(PFTEMP, ROUNDDOWN(addr,PGSIZE), PGSIZE);
+	if (sys_page_map(0, PFTEMP, 0, ROUNDDOWN(addr, PGSIZE), PTE_W|PTE_U|PTE_P) < 0)
+		panic("panic: sys_page_map");
+	if (sys_page_unmap(0, PFTEMP) < 0)
+		panic("panic: sys_page_unmap");
+	return;
+
+
+	//panic("pgfault not implemented");
 }
 
 //
@@ -51,11 +64,23 @@ pgfault(struct UTrapframe *utf)
 static int
 duppage(envid_t envid, unsigned pn)
 {
-	int r;
+	int r = 0;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
-	return 0;
+
+	void * addr = (void*)(pn * PGSIZE);
+	if ((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){
+		if ((r = sys_page_map(0, addr, envid, addr, PTE_P | PTE_U | PTE_COW)) < 0)
+			//panic("map fault at first");
+			return r;
+		if ((r = sys_page_map(0, addr, 0, addr, PTE_P | PTE_U | PTE_COW)) < 0)
+			//panic("map fault at second");
+			return r;
+		
+	} else{
+		sys_page_map(0, addr, envid, addr, PTE_U|PTE_P);
+	}
+	return r;
 }
 
 //
@@ -78,6 +103,68 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
+	uint32_t envid;
+	set_pgfault_handler(pgfault);
+	int i;
+	envid = sys_exofork();
+	if (envid < 0)
+		panic("sys_exofork: %e", envid);
+	if (envid > 0){
+		// We are the parent.
+		for (i = 0; i < USTACKTOP; i += PGSIZE){
+			if ((uvpd[PDX(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_U)){
+				duppage(envid, PGNUM(i));
+			}
+		}
+	} else{
+		// We are the child.
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+	if (sys_page_alloc(envid, (void *)(UXSTACKTOP-PGSIZE), PTE_U|PTE_W|PTE_P) < 0)
+		panic("envid alloc exception stack error");
+	extern void _pgfault_upcall();
+	sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
+
+	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0)
+		panic("panic: set enivd status failure ");
+
+	return envid;	
+
+	panic("fork not implemented");
+}
+envid_t
+pfork(void)
+{
+	// LAB 4: Your code here.
+	uint32_t envid;
+	set_pgfault_handler(pgfault);
+	int i;
+	envid = sys_prifork();
+	if (envid < 0)
+		panic("sys_prifork: %e", envid);
+	if (envid > 0){
+		// We are the parent.
+		for (i = 0; i < USTACKTOP; i += PGSIZE){
+			if ((uvpd[PDX(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_U)){
+				duppage(envid, PGNUM(i));
+			}
+		}
+	} else{
+		// We are the child.
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+	if (sys_page_alloc(envid, (void *)(UXSTACKTOP-PGSIZE), PTE_U|PTE_W|PTE_P) < 0)
+		panic("envid alloc exception stack error");
+	extern void _pgfault_upcall();
+	sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
+
+	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0)
+		panic("panic: set enivd status failure ");
+
+	return envid;	
+
 	panic("fork not implemented");
 }
 

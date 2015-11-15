@@ -17,7 +17,9 @@ enum {
 	SYS_yield,
 	SYS_ipc_try_send,
 	SYS_ipc_recv,
-	NSYSCALLS
+	NSYSCALLS,
+	SYS_acquire_priority,
+	SYS_prifork
 };
 
 #endif /* !JOS_INC_SYSCALL_H */

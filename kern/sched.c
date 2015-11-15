@@ -29,10 +29,65 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
+	int curID;
+	if (curenv) 
+		curID = ENVX(curenv->env_id);
+	else
+		curID = -1;
+	//cprintf("Current ENV ID %x\n",curID);
+
+	int i;
+	for (i = curID+1; i < NENV; i++) {
+		if (envs[i].env_status == ENV_RUNNABLE)	{
+				//cprintf("To RUN %d %x\n", i, envs[i].env_id);
+				env_run(envs+i);
+			}
+	}
+	if (i == NENV){
+		for (i = 0; i < curID; i++) {
+			if (envs[i].env_status == ENV_RUNNABLE)	{
+				//cprintf("To RUN %d %x\n", i, envs[i].env_id);			
+				env_run(envs+i);
+			}
+		}
+	}	
+	if (curID != -1 && i == curID) {
+		//cprintf("No other runnable environments in the system!\n");
+		if (curenv->env_status == ENV_RUNNING) env_run(curenv);
+	}
 
 	// sched_halt never returns
 	sched_halt();
 }
+
+// Choose a user environment to run and run it.
+void
+pri_yield(void)
+{
+	int id = -1;
+	int max_pri = -1;
+	int i;
+	for (i = 0; i < NENV; i++){
+		if ((envs[i].env_status == ENV_RUNNABLE && envs[i].env_pri >= max_pri) || (envs[i].env_status == ENV_RUNNING && envs[i].env_pri > max_pri)){
+				id = i;
+				max_pri = envs[i].env_pri;
+		}
+	}
+	if (max_pri != -1){
+		envs[id].env_pri = envs[id].env_pri_back;
+		envs[id].env_time_count = 0;
+		cprintf("%d\n", id);
+		env_run(envs+id);
+	}
+	// sched_halt never returns
+	if (curenv){
+		if (curenv->env_status == ENV_RUNNING) env_run(curenv);
+	}
+	
+	sched_halt();
+	
+}
+
 
 // Halt this CPU when there is nothing to do. Wait until the
 // timer interrupt wakes it up. This function never returns.
