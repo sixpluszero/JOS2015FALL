@@ -282,6 +282,15 @@ static void trap_dispatch(struct Trapframe *tf){
 
 	if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
 		lapic_eoi();
+		// Should we increase time counter here?
+
+		for (int i = 0; i < NENV; i++)
+			if (envs[i].env_status == ENV_RUNNABLE){
+				envs[i].env_time_count+=1;
+				if (envs[i].env_time_count > 1000)
+					envs[i].env_pri += 1;
+					envs[i].env_time_count = 0;									
+			}
 		sched_yield();
 		return;
 	}

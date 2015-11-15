@@ -382,6 +382,9 @@ void env_create(uint8_t *binary, enum EnvType type){
 	load_icode(thenewenv, binary);
 	thenewenv->env_type = type;
 	thenewenv->env_pri = 10;
+	thenewenv->env_pri_back = 10;
+	thenewenv->env_time_count = 0;
+
 }
 
 //

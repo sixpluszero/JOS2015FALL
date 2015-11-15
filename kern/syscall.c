@@ -65,8 +65,8 @@ sys_env_destroy(envid_t envid)
 static void
 sys_yield(void)
 {
-	//sched_yield();
-	pri_yield();
+	sched_yield();
+	//pri_yield();
 }
 
 // Allocate a new environment.
@@ -88,6 +88,9 @@ sys_exofork(void)
 	//Error appears...
 	if (retCode < 0) return(retCode);
 	//cprintf("FORK\n");
+	thenewenv->env_pri = curenv -> env_pri;
+	thenewenv->env_pri_back = curenv -> env_pri_back;
+	thenewenv->env_time_count = 0;
 	thenewenv->env_tf = curenv -> env_tf;
 	thenewenv->env_status = ENV_NOT_RUNNABLE;
 	thenewenv->env_tf.tf_regs.reg_eax = 0;
@@ -402,6 +405,8 @@ sys_prifork(void)
 	//Error appears...
 	if (retCode < 0) return(retCode);
 	thenewenv->env_pri = curenv->env_pri - 1;
+	thenewenv->env_pri_back = thenewenv->env_pri;
+	thenewenv->env_time_count = 0;
 	cprintf("Parent: %d Son: %d\n", curenv->env_pri, thenewenv->env_pri);
 	thenewenv->env_tf = curenv -> env_tf;
 	thenewenv->env_status = ENV_NOT_RUNNABLE;

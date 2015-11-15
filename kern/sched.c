@@ -74,6 +74,9 @@ pri_yield(void)
 		}
 	}
 	if (max_pri != -1){
+		envs[id].env_pri = envs[id].env_pri_back;
+		envs[id].env_time_count = 0;
+		cprintf("%d\n", id);
 		env_run(envs+id);
 	}
 	// sched_halt never returns
