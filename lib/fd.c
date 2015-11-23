@@ -74,7 +74,6 @@ int
 fd_lookup(int fdnum, struct Fd **fd_store)
 {
 	struct Fd *fd;
-
 	if (fdnum < 0 || fdnum >= MAXFD) {
 		if (debug)
 			cprintf("[%08x] bad fd %d\n", thisenv->env_id, fdnum);
@@ -154,7 +153,9 @@ close(int fdnum)
 	if ((r = fd_lookup(fdnum, &fd)) < 0)
 		return r;
 	else
+	{
 		return fd_close(fd, 1);
+	}
 }
 
 void

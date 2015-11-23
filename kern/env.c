@@ -386,7 +386,8 @@ void env_create(uint8_t *binary, enum EnvType type){
 	thenewenv->env_pri = 10;
 	thenewenv->env_pri_back = 10;
 	thenewenv->env_time_count = 0;
-
+	if (type == ENV_TYPE_FS) 
+		thenewenv->env_tf.tf_eflags |= FL_IOPL_MASK;
 }
 
 //

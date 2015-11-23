@@ -23,12 +23,10 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
-	//cprintf("%x\n", (uint32_t)addr);
 	// LAB 4: Your code here.
 	if (!((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_COW) && (err & FEC_WR))){
 		panic("panic: It is not a cow");
 	}
-	//cprintf("TTTTTTT%x %x\n", (uint32_t)addr, utf->utf_eip);
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -69,6 +67,9 @@ duppage(envid_t envid, unsigned pn)
 	// LAB 4: Your code here.
 
 	void * addr = (void*)(pn * PGSIZE);
+	if ((uvpt[pn] & PTE_SHARE)){
+		sys_page_map(0, addr, envid, addr, uvpt[pn]&PTE_SYSCALL);		
+	} else
 	if ((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW)){
 		if ((r = sys_page_map(0, addr, envid, addr, PTE_P | PTE_U | PTE_COW)) < 0)
 			//panic("map fault at first");

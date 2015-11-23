@@ -1,7 +1,7 @@
 #include <inc/lib.h>
 
 #define BUFSIZ 1024		/* Find the buffer overrun bug! */
-int debug = 0;
+int debug = 1;
 
 
 // gettoken(s, 0) prepares gettoken for subsequent calls and returns 0.
@@ -53,9 +53,14 @@ again:
 			// then check whether 'fd' is 0.
 			// If not, dup 'fd' onto file descriptor 0,
 			// then close the original 'fd'.
-
-			// LAB 5: Your code here.
-			panic("< redirection not implemented");
+			if ((fd = open(t, O_RDONLY)) < 0){
+				cprintf("open %s for read: %e", t, fd);
+				exit();
+			}
+			if (fd != 0){
+				dup(fd, 0);
+				close(fd);
+			}
 			break;
 
 		case '>':	// Output redirection
@@ -96,6 +101,7 @@ again:
 				pipe_child = r;
 				if (p[1] != 1) {
 					dup(p[1], 1);
+					cprintf("%d\n",p[1]);
 					close(p[1]);
 				}
 				close(p[0]);

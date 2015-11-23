@@ -35,6 +35,7 @@ umain(int argc, char **argv)
 
 	if ((r = xopen("/newmotd", O_RDONLY)) < 0)
 		panic("serve_open /newmotd: %e", r);
+
 	if (FVA->fd_dev_id != 'f' || FVA->fd_offset != 0 || FVA->fd_omode != O_RDONLY)
 		panic("serve_open did not fill struct Fd correctly\n");
 	cprintf("serve_open is good\n");
@@ -61,6 +62,7 @@ umain(int argc, char **argv)
 	// The file server won't think it's stale until we unmap the
 	// FD page.
 	fdcopy = *FVA;
+
 	sys_page_unmap(0, FVA);
 
 	if ((r = devfile.dev_read(&fdcopy, buf, sizeof buf)) != -E_INVAL)

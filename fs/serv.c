@@ -9,7 +9,7 @@
 #include "fs.h"
 
 
-#define debug 0
+#define debug 1
 
 // The file system server maintains three structures
 // for each open file.
@@ -70,8 +70,10 @@ openfile_alloc(struct OpenFile **o)
 	for (i = 0; i < MAXOPEN; i++) {
 		switch (pageref(opentab[i].o_fd)) {
 		case 0:
+
 			if ((r = sys_page_alloc(0, opentab[i].o_fd, PTE_P|PTE_U|PTE_W)) < 0)
 				return r;
+
 			/* fall through */
 		case 1:
 			opentab[i].o_fileid += MAXOPEN;
@@ -167,7 +169,6 @@ try_open:
 
 	if (debug)
 		cprintf("sending success, page %08x\n", (uintptr_t) o->o_fd);
-
 	// Share the FD page with the caller by setting *pg_store,
 	// store its permission in *perm_store
 	*pg_store = o->o_fd;
@@ -209,12 +210,21 @@ serve_read(envid_t envid, union Fsipc *ipc)
 {
 	struct Fsreq_read *req = &ipc->read;
 	struct Fsret_read *ret = &ipc->readRet;
+	int r;
+	struct OpenFile *open_file;
 
 	if (debug)
 		cprintf("serve_read %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
-
 	// Lab 5: Your code here:
-	return 0;
+	r = openfile_lookup(envid, req->req_fileid, &open_file);
+	if (r < 0)
+		return r;
+	//MIN(req->req_n, sizeof(ret->ret_buf))
+	r = file_read(open_file->o_file, ret->ret_buf, req->req_n, open_file->o_fd->fd_offset);
+	if (r < 0) 
+		return r;
+	open_file->o_fd->fd_offset += r;
+	return r;
 }
 
 
@@ -227,6 +237,18 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 {
 	if (debug)
 		cprintf("serve_write %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
+	int r;
+	struct OpenFile *open_file;
+
+	r = openfile_lookup(envid, req->req_fileid, &open_file);
+	if (r < 0)
+		return r;
+	//MIN(req->req_n, sizeof(ret->ret_buf))
+	r = file_write(open_file->o_file, req->req_buf, req->req_n, open_file->o_fd->fd_offset);
+	if (r < 0) 
+		return r;
+	open_file->o_fd->fd_offset += r;
+	return r;
 
 	// LAB 5: Your code here.
 	panic("serve_write not implemented");
@@ -267,6 +289,7 @@ serve_flush(envid_t envid, struct Fsreq_flush *req)
 	if ((r = openfile_lookup(envid, req->req_fileid, &o)) < 0)
 		return r;
 	file_flush(o->o_file);
+
 	return 0;
 }
 
