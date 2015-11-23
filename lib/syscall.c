@@ -120,6 +120,11 @@ sys_ipc_recv(void *dstva)
 void
 sys_acquire_priority(int pri)
 {
-	syscall(SYS_acquire_priority, 1, 0, 0, 0, 0, 0);
-	
+	syscall(SYS_acquire_priority, 1, 0, 0, 0, 0, 0);	
+}
+
+void
+sys_execve_adjust(int my_envid, int temp_envid)
+{
+	syscall(SYS_execve_adjust, 1, my_envid, temp_envid, 0, 0, 0);
 }

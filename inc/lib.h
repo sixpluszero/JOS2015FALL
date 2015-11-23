@@ -59,6 +59,7 @@ int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
 void sys_acquire_priority(int pri);
 static envid_t sys_prifork(void);
+void sys_execve_adjust(int my_envid, int temp_envid);
 
 
 // This must be inlined.  Exercise for reader: why?
@@ -122,6 +123,11 @@ int	pageref(void *addr);
 // spawn.c
 envid_t	spawn(const char *program, const char **argv);
 envid_t	spawnl(const char *program, const char *arg0, ...);
+
+// execve.c
+
+envid_t	execve(const char *program, const char **argv);
+envid_t	execvel(const char *program, const char *arg0, ...);
 
 // console.c
 void	cputchar(int c);

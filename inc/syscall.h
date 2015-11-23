@@ -19,7 +19,8 @@ enum {
 	SYS_ipc_recv,
 	NSYSCALLS,
 	SYS_acquire_priority,
-	SYS_prifork
+	SYS_prifork,
+	SYS_execve_adjust
 };
 
 #endif /* !JOS_INC_SYSCALL_H */

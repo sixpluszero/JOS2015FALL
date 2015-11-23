@@ -90,9 +90,7 @@ sys_exofork(void)
 	thenewenv->env_tf = curenv -> env_tf;
 	thenewenv->env_status = ENV_NOT_RUNNABLE;
 	thenewenv->env_tf.tf_regs.reg_eax = 0;
-	//cprintf("%x %x %x\n",curenv->env_id, thenewenv->env_id, curenv->env_tf.tf_regs.reg_eax);
 	return thenewenv->env_id;
-	//panic("sys_exofork not implemented");
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -271,10 +269,6 @@ sys_page_map(envid_t srcenvid, void *srcva,
 
 	if (retCode < 0) return retCode;
 	return 0;
-
-
-
-	panic("sys_page_map not implemented");
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -435,6 +429,35 @@ sys_prifork(void)
 	return thenewenv->env_id;
 }
 
+void sys_execve_adjust(int my_envid, int temp_envid){
+	pte_t *pte;
+	struct PageInfo *pg;
+	struct Env *srcenv; 
+	int r;
+
+	r = envid2env(temp_envid, &srcenv, 1);
+	if (r < 0)
+		panic("sys_execve_adjust panic at envid2env!");
+	
+	for (int i = 0; i < USTACKTOP; i += PGSIZE)
+		page_remove(curenv->env_pgdir, (void*)i);
+
+	for (int i = 0; i < USTACKTOP; i += PGSIZE){
+		pg = page_lookup(srcenv->env_pgdir, (void *)i, &pte);
+		if (!pg) 
+			continue;
+
+		r = page_insert(curenv->env_pgdir, pg, (void*)i, ((*pte) & 0xFFF));
+		if (r < 0) 
+			panic("sys_execve_adjust panic at page_insert!");
+	}
+	
+	curenv->env_tf = srcenv -> env_tf;
+	
+	env_destroy(srcenv);
+
+	sched_yield();
+}
 
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
@@ -493,7 +516,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_env_set_trapframe:
 			return sys_env_set_trapframe(a1, (struct Trapframe *)a2);
 			break;
-
+		case SYS_execve_adjust:
+			sys_execve_adjust(a1, a2);
+			break;
 		default:
 			return -E_INVAL;
 	}
