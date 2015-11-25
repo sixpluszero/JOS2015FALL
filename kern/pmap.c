@@ -525,7 +525,7 @@ page_remove(pde_t *pgdir, void *va){
 	pte_t *pte_store;
 	struct PageInfo *pp; 
 	pp = page_lookup(pgdir, va, &pte_store);
-	if (!pte_store) return;
+	if (pp == NULL) return;
 	page_decref(pp);
 	*pte_store = 0; //invalidate the PTE of the va pointed to the phyaddr;
 	tlb_invalidate(pgdir, va);
