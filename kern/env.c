@@ -54,6 +54,7 @@ struct Segdesc gdt[] =
 	// 0x28 - tss, initialized in trap_init_percpu()
 	[GD_TSS0 >> 3] = SEG_NULL,
 
+	// 0x30 - just a test of the gdt setting
 	[GD_TEST >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0)
 };
 
@@ -161,7 +162,7 @@ static int env_setup_vm(struct Env *e){
 	struct PageInfo *p = NULL;
 	cprintf("env_setup_vm start\n");
 	// Allocate a page for the page directory
-	if (!(p = page_alloc(ALLOC_ZERO)))
+	if ((p = page_alloc(ALLOC_ZERO)) < 0)
 		return -E_NO_MEM;
 
 	// Now, set e->env_pgdir and initialize the page directory.
@@ -188,7 +189,6 @@ static int env_setup_vm(struct Env *e){
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
 	e -> env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
-	cprintf("Page VM setup done..\n");
 	return 0;
 }
 
@@ -272,7 +272,6 @@ static void region_alloc(struct Env *e, void *va, size_t len){
 		if (!pg) panic("allocation failure");
 		page_insert(e->env_pgdir, pg, va_current, PTE_U | PTE_W | PTE_P);
 	}
-	cprintf("region_alloc done\n");
 	// Hint: It is easier to use region_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
@@ -354,7 +353,6 @@ static void load_icode(struct Env *e, uint8_t *binary){
 	lcr3(PADDR(kern_pgdir));
 	
 	e->env_tf.tf_eip = ELFHDR->e_entry;
-	cprintf("tf_eip is %x\n",e->env_tf.tf_eip);
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 

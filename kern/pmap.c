@@ -172,8 +172,6 @@ void mem_init(void){
 	check_page_alloc();
 
 	check_page();
-	//panic("mem_init: This function is not finished\n");
-	cprintf("%x %x\n",&pages[1], pages);
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
 
@@ -196,13 +194,10 @@ void mem_init(void){
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
-	cprintf("[############Debug##########]%d %d\n",ROUNDUP(sizeof(struct Env)*NENV, PTSIZE), PTSIZE);
-	uint32_t TEST = ROUNDUP(sizeof(struct Env) * NENV, PTSIZE);
+	uint32_t USIZE = ROUNDUP(sizeof(struct Env) * NENV, PTSIZE);
 	boot_map_region(kern_pgdir,
 		UENVS,
-		//ROUNDUP(sizeof(struct Env) * NENV, PTSIZE),
-		//PTSIZE,
-		TEST,
+		USIZE,
 		PADDR(envs),
 		PTE_U|PTE_P);
 	//////////////////////////////////////////////////////////////////////
@@ -446,8 +441,6 @@ static void boot_map_region_4M(pde_t *pgdir, uintptr_t va, size_t size, physaddr
 	pte_t *pte = NULL;
 	for (i = 0; i < size; i += PTSIZE){
 		pte = &pgdir[PDX(va)];
-		//pte = pgdir_walk(pgdir, (void *)va_base, 1);
-		//if (!pte) return;
 		*pte = PTE_ADDR(pa_base) | perm | PTE_P | PTE_PS;
 
 		va_base += PTSIZE;
@@ -575,16 +568,17 @@ static uintptr_t user_mem_check_addr;
 //
 int user_mem_check(struct Env *env, const void *va, size_t len, int perm){
 	// LAB 3: Your code here.
-	void *va_begin = ROUNDDOWN((void *)va, PGSIZE);
-	void *va_end = ROUNDUP((void *)va+len, PGSIZE);
-	void *va_current = va_begin;
+	void* va_begin = ROUNDDOWN((void *)va, PGSIZE);
+	void* va_end = ROUNDUP((void *)va+len, PGSIZE);
+	void* va_current = va_begin;
 	pte_t *pte;
 	for (; va_current < va_end; va_current += PGSIZE){
 		pte = pgdir_walk(env->env_pgdir, va_current, 0);
-		if (!pte || ((int)va_current >= ULIM) || ((*pte & PTE_P) == 0) || ((*pte & perm) != perm)){
+		if (!pte || ((uint32_t)va_current >= ULIM) || ((*pte & PTE_P) == 0) || ((*pte & perm) != perm)){
 			// set the debug info of the va address
-			user_mem_check_addr = (int)va_current;
-			if ((int)va_current < (int)va) user_mem_check_addr = (int)va;
+			user_mem_check_addr = (uint32_t)va_current;
+			if ((uint32_t)va_current < (uint32_t)va) 
+				user_mem_check_addr = (uint32_t)va;
 			return -E_FAULT;
 		}
 	}
@@ -599,7 +593,7 @@ int user_mem_check(struct Env *env, const void *va, size_t len, int perm){
 // environment, this function will not return.
 //
 void user_mem_assert(struct Env *env, const void *va, size_t len, int perm){
-	if (user_mem_check(env, va, len, perm | PTE_U) < 0) {
+	if (user_mem_check(env, va, len, perm | PTE_U | PTE_P) < 0) {
 		cprintf("[%08x] user_mem_check assertion failure for "
 			"va %08x\n", env->env_id, user_mem_check_addr);
 		env_destroy(env);	// may not return
