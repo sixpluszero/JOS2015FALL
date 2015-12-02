@@ -23,12 +23,10 @@ pgfault(struct UTrapframe *utf)
 	// Hint:
 	//   Use the read-only page table mappings at uvpt
 	//   (see <inc/memlayout.h>).
-	//cprintf("%x\n", (uint32_t)addr);
 	// LAB 4: Your code here.
 	if (!((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_COW) && (err & FEC_WR))){
 		panic("panic: It is not a cow");
 	}
-	//cprintf("TTTTTTT%x %x\n", (uint32_t)addr, utf->utf_eip);
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
 	// page to the old page's address.
@@ -47,7 +45,6 @@ pgfault(struct UTrapframe *utf)
 	return;
 
 
-	//panic("pgfault not implemented");
 }
 
 //
