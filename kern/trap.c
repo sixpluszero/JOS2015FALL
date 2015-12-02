@@ -422,7 +422,6 @@ void page_fault_handler(struct Trapframe *tf){
 	// LAB 4: Your code here.
 	uint32_t UTsize = sizeof(struct UTrapframe);
 	uint32_t base_addr;
-
 	// Do as the order shows above...
 	if (curenv->env_pgfault_upcall){
 		//cprintf("Have pgfault_upcall\n");
